@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ktlint)
 }
 
 android {
@@ -17,8 +16,8 @@ android {
         applicationId = "com.syzygyhub.example"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "3.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -107,7 +106,9 @@ val ktlintCheckSources by tasks.registering(JavaExec::class) {
     workingDir = project.projectDir
 }
 
-tasks.named("ktlintCheck") {
+tasks.register("ktlintCheck") {
+    group = "verification"
+    description = "Runs ktlint on src/main and src/test Kotlin sources"
     dependsOn(ktlintCheckSources)
 }
 
@@ -120,6 +121,8 @@ val ktlintFormatSources by tasks.registering(JavaExec::class) {
     workingDir = project.projectDir
 }
 
-tasks.named("ktlintFormat") {
+tasks.register("ktlintFormat") {
+    group = "formatting"
+    description = "Auto-fixes ktlint violations in src/main and src/test Kotlin sources"
     dependsOn(ktlintFormatSources)
 }

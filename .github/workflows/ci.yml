@@ -1,3 +1,6 @@
+# Caller workflow: CI for an Android app (Gradle). Copy to .github/workflows/ci.yml.
+# Input names are the planned vocabulary; they are documented in .github/workflows/README.md
+# of Syzygy-Hub/.github. java_version must match jvmToolchain() in build.gradle.kts.
 name: CI
 
 on:
@@ -9,5 +12,12 @@ jobs:
   ci:
     uses: Syzygy-Hub/.github/.github/workflows/android-ci.yml@main
     with:
-      java_version: '17'
-      coverage: false
+      project_type: app
+      working_directory: '.'
+      runner: ubuntu-latest
+      java_version: '21'
+      module: ':app'
+      instrumented_tests: false
+      coverage: true
+      upload_artifacts: true
+      org_config_sha: 'main'
