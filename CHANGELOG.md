@@ -1,8 +1,22 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to `syzygy-example-android` are documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [3.0.0] - 2026-10-18
+
+### Added
+- Release workflow `.github/workflows/release.yml` from the Hub's app release template. It fires on strict bare-semver tags and calls `app-release.yml@main`.
+- Library compatibility table in the README.
+- The demo login is documented as shipping in all build types, including release builds.
+
+### Changed
+- CI caller aligned with the Hub's Android app CI template: `project_type: app`, `module: ':app'`, Java 21. Triggers are push-only with tags excluded.
+- Lint: one ktlint setup, the ktlint-cli 1.0.1 task in `app/build.gradle.kts`, now checks Kotlin sources. The ktlint Gradle plugin is removed.
+- Removed the placeholder instrumented test template.
+- README rewritten to the v3.0.0 facts. The one-time rename steps are removed.
+- `versionName` 3.0.0, `versionCode` 2.
 
 ## [1.0.0] - 2026-10-16
 
@@ -15,24 +29,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - App renamed from SyzygyBase to Syzygy Example (applicationId `com.syzygyhub.example`, project `SyzygyExample`)
 - Syzygy layers remain declared at 3.0.0 on JitPack (Foundation, Core, Services, AI, UI)
 
-## [3.0.0] - 2026-10-06
-
-### Added
-- All 5 Syzygy layers declared as dependencies at v3.0.0 (Foundation, Core, Services, AI, UI)
-- Core DI Container wiring for Logger, NetworkClient, AuthProvider, StorageProvider, StateStore, EventBus, Router, Scheduler, FeatureFlagProvider, ConfigRegistry, AppLifecycleTracker
-- SyzygyThemeProvider wrapping the app root
-- Hub reusable CI workflow (android-ci.yml@main)
-- EditorConfig lint configuration
-- JitPack repository for layer dependencies
-- syzygy.yml layer manifest
-
-### Changed
-- applicationId renamed from com.aks.boilerplate to com.syzygyhub.base
-- App name renamed from Boilerplate to SyzygyBase
-- Version set to 3.0.0
-
-### Removed
-- Inline CI workflow (android.yml) replaced by Hub reusable workflow
-- Android Studio template theme files (Color.kt, Theme.kt, Type.kt, Spacing.kt)
-- Local shadow copies of NetworkClient, ApiError, SecureStorage
-- Hand-rolled DI container replaced by Core DI Container

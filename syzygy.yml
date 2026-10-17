@@ -4,7 +4,7 @@ platform: android
 language: kotlin
 package_manager: jitpack
 license: MIT
-version: 1.0.0
+version: 3.0.0
 syzygy_foundation: ">=3.0.0"
 description: "Reference Android app that composes the Syzygy layers with Jetpack Compose and a demo login"
 demonstrates: [foundation, ui, core, services, ai, base]
