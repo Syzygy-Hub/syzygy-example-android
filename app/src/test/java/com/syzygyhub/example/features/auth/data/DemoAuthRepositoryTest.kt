@@ -30,30 +30,34 @@ class DemoAuthRepositoryTest {
     }
 
     @Test
-    fun `valid demo login signs the user in`() = runBlocking {
-        val user = repository.login(DemoCredentials.EMAIL, DemoCredentials.PASSWORD)
+    fun `valid demo login signs the user in`() =
+        runBlocking {
+            val user = repository.login(DemoCredentials.EMAIL, DemoCredentials.PASSWORD)
 
-        assertEquals(DemoCredentials.EMAIL, user.email)
-        assertTrue(repository.isLoggedIn())
-    }
-
-    @Test
-    fun `wrong password is rejected and the session stays signed out`() = runBlocking {
-        val result = runCatching {
-            repository.login(DemoCredentials.EMAIL, "not-the-password")
+            assertEquals(DemoCredentials.EMAIL, user.email)
+            assertTrue(repository.isLoggedIn())
         }
 
-        assertTrue(result.isFailure)
-        assertFalse(repository.isLoggedIn())
-    }
+    @Test
+    fun `wrong password is rejected and the session stays signed out`() =
+        runBlocking {
+            val result =
+                runCatching {
+                    repository.login(DemoCredentials.EMAIL, "not-the-password")
+                }
+
+            assertTrue(result.isFailure)
+            assertFalse(repository.isLoggedIn())
+        }
 
     @Test
-    fun `logout clears the demo session`() = runBlocking {
-        repository.login(DemoCredentials.EMAIL, DemoCredentials.PASSWORD)
+    fun `logout clears the demo session`() =
+        runBlocking {
+            repository.login(DemoCredentials.EMAIL, DemoCredentials.PASSWORD)
 
-        repository.logout()
+            repository.logout()
 
-        assertFalse(repository.isLoggedIn())
-        assertNull(repository.currentUser())
-    }
+            assertFalse(repository.isLoggedIn())
+            assertNull(repository.currentUser())
+        }
 }

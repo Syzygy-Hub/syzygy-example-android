@@ -32,8 +32,9 @@ class DemoAuthRepository(
         password: String
     ): AuthenticatedUser =
         withContext(Dispatchers.IO) {
-            val matches = email.trim().lowercase() == DemoCredentials.EMAIL &&
-                password == DemoCredentials.PASSWORD
+            val matches =
+                email.trim().lowercase() == DemoCredentials.EMAIL &&
+                    password == DemoCredentials.PASSWORD
             if (!matches) {
                 throw IllegalArgumentException("Invalid email or password.")
             }
@@ -61,9 +62,10 @@ class DemoAuthRepository(
             authProvider.state.value is AuthState.Authenticated
         }
 
-    private fun demoUser() = AuthenticatedUser(
-        id = "demo-user",
-        email = DemoCredentials.EMAIL,
-        displayName = "Demo User",
-    )
+    private fun demoUser() =
+        AuthenticatedUser(
+            id = "demo-user",
+            email = DemoCredentials.EMAIL,
+            displayName = "Demo User",
+        )
 }

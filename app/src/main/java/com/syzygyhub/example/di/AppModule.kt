@@ -4,12 +4,6 @@ import android.content.Context
 import com.syzygy.services.auth.JWTAuthProvider
 import com.syzygy.services.networking.OkHttpNetworkClient
 import com.syzygy.services.persistence.EncryptedStorageProvider
-import com.syzygyhub.example.features.auth.data.AuthRepository
-import com.syzygyhub.example.features.auth.data.DemoAuthRepository
-import com.syzygyhub.example.features.auth.domain.AuthRepositoryProtocol
-import com.syzygyhub.example.features.auth.domain.AuthUseCase
-import com.syzygyhub.example.features.auth.presentation.LoginViewModel
-import com.syzygyhub.example.network.TokenRefreshNetworkClient
 import com.syzygyhub.core.configuration.ConfigRegistry
 import com.syzygyhub.core.di.Container
 import com.syzygyhub.core.di.Lifetime
@@ -21,6 +15,12 @@ import com.syzygyhub.core.logging.ConsoleLogDestination
 import com.syzygyhub.core.logging.Logger
 import com.syzygyhub.core.navigation.Router
 import com.syzygyhub.core.scheduling.CoroutineScheduler
+import com.syzygyhub.example.features.auth.data.AuthRepository
+import com.syzygyhub.example.features.auth.data.DemoAuthRepository
+import com.syzygyhub.example.features.auth.domain.AuthRepositoryProtocol
+import com.syzygyhub.example.features.auth.domain.AuthUseCase
+import com.syzygyhub.example.features.auth.presentation.LoginViewModel
+import com.syzygyhub.example.network.TokenRefreshNetworkClient
 import com.syzygyhub.foundation.contracts.auth.AuthProvider
 import com.syzygyhub.foundation.contracts.logging.LogLevel
 import com.syzygyhub.foundation.contracts.network.NetworkClientProtocol
@@ -190,11 +190,12 @@ class AppModule(private val applicationContext: Context) {
             val authProvider = container.resolve(JWTAuthProvider::class)
             // AuthApi is Retrofit-based; a real implementation would resolve it via OkHttpNetworkClient/Retrofit.
             // For now we supply a no-op stub so the app compiles and the DI wiring is demonstrable.
-            val authRepository: AuthRepositoryProtocol = if (USE_DEMO_LOGIN) {
-                DemoAuthRepository(authProvider)
-            } else {
-                AuthRepository(NoOpAuthApi, authProvider)
-            }
+            val authRepository: AuthRepositoryProtocol =
+                if (USE_DEMO_LOGIN) {
+                    DemoAuthRepository(authProvider)
+                } else {
+                    AuthRepository(NoOpAuthApi, authProvider)
+                }
             val authUseCase = AuthUseCase(authRepository)
             LoginViewModel(authUseCase)
         }
