@@ -1,14 +1,21 @@
-layer: base
-version: "3.0.0"
-syzygy_foundation: "3.0.0"
-contracts:
-  - name: foundation
-    version: "3.0.0"
-  - name: core
-    version: "3.0.0"
-  - name: services
-    version: "3.0.0"
-  - name: ai
-    version: "3.0.0"
-  - name: ui
-    version: "3.0.0"
+name: syzygy-example-android
+type: example
+platform: android
+language: kotlin
+package_manager: jitpack
+license: MIT
+version: 1.0.0
+syzygy_foundation: ">=3.0.0"
+description: "Reference Android app that composes the Syzygy layers with Jetpack Compose and a demo login"
+demonstrates: [foundation, ui, core, services, ai, base]
+depends_on:
+  - name: syzygy-foundation-android
+    version_constraint: ">=3.0.0"
+  - name: syzygy-core-android
+    version_constraint: ">=3.0.0"
+  - name: syzygy-services-android
+    version_constraint: ">=3.0.0"
+  - name: syzygy-ai-android
+    version_constraint: ">=3.0.0"
+  - name: syzygy-ui-android
+    version_constraint: ">=3.0.0"

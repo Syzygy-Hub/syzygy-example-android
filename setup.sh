@@ -1,100 +1,199 @@
 #!/usr/bin/env bash
+# setup.sh - rename this example app to "Syzygy Example".
 #
-# setup.sh — rename this Android Clean Architecture boilerplate to a new app.
+# Usage:
+#   ./setup.sh           dry run: print every planned change and change nothing (default)
+#   ./setup.sh --apply   perform the changes; refuses to overwrite an existing path
 #
-# Usage: ./setup.sh MyApp
-#
-# Renames all occurrences of "Boilerplate" / "boilerplate" throughout the
-# project (applicationId, package folders, Kotlin package declarations and
-# imports, app name, rootProject.name, CI references) to the given app name.
-#
-# Does NOT run a gradle build, touch README.md, or modify .gitignore.
-
+# Skips: CHANGELOG.md (history), setup.sh, .git, build outputs, Pods, node_modules, .gradle, .dart_tool.
+# All collisions are checked before any change, so an error leaves the tree untouched.
+# Writes only inside this repository.
 set -euo pipefail
 
-usage() {
-    echo "Usage: $0 <NewAppName>"
-    echo "Example: $0 MyApp"
-    exit 1
+APPLY=0
+case "${1:-}" in
+  "") ;;
+  --apply) APPLY=1 ;;
+  -h|--help) echo "Usage: $0 [--apply]"; exit 0 ;;
+  *) echo "Usage: $0 [--apply]" >&2; exit 2 ;;
+esac
+
+cd "$(dirname "${BASH_SOURCE[0]}")"
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "Error: not inside a git work tree." >&2
+  exit 2
+fi
+
+# ---- platform configuration -------------------------------------------------
+# Path prefix renames: OLD_PREFIX|NEW_PREFIX (applied to tracked paths).
+PATH_PREFIX_RULES=('app/src/main/java/com/syzygyhub/base/|app/src/main/java/com/syzygyhub/example/' 'app/src/test/java/com/syzygyhub/base/|app/src/test/java/com/syzygyhub/example/' 'app/src/androidTest/java/com/syzygyhub/base/|app/src/androidTest/java/com/syzygyhub/example/'  "|")
+# Display-name rules, applied before the general rules: OLD|NEW (exact text).
+DISPLAY_RULES=('<string name="app_name">SyzygyBase</string>|<string name="app_name">Syzygy Example</string>'  "|")
+# Files whose content is never rewritten (their paths may still be renamed).
+CONTENT_SKIP=("CHANGELOG.md" "setup.sh" 'app/src/main/java/com/syzygyhub/base/BoilerplateApplication.kt')
+# Tracked paths that are never renamed.
+PATH_SKIP=("|" 'app/src/main/java/com/syzygyhub/base/BoilerplateApplication.kt')
+# Informational warnings printed on every run.
+WARNINGS=('app/src/main/java/com/syzygyhub/base/BoilerplateApplication.kt is an empty stub. It is not renamed, not edited and not deleted: delete it manually. Until then the leftover check reports it.'  "|")
+# ---- general rules (applied after the display rules) -------------------------
+COMMON_RULES=(
+  "com.syzygyhub.base|com.syzygyhub.example"
+  "Syzygy Base|Syzygy Example"
+  "syzygy_base|syzygy_example"
+  "syzygy-base|syzygy-example"
+  "SyzygyBase|SyzygyExample"
+)
+LEFTOVER_PATTERN='SyzygyBase|syzygy-base|syzygy_base|com\.syzygyhub\.base|Boilerplate|boilerplate|com\.aks'
+
+# ---- helpers ------------------------------------------------------------------
+in_list() {  # in_list VALUE ITEM...  (succeeds if VALUE equals an ITEM)
+  local v="$1" item; shift
+  for item in "$@"; do [ "$v" = "$item" ] && return 0; done
+  return 1
 }
 
-if [[ $# -lt 1 || -z "${1:-}" ]]; then
-    usage
-fi
+is_text() { grep -Iq . "$1" 2>/dev/null; }
 
-NEW_NAME_RAW="$1"
+new_path_of() {  # print the post-rename path of a tracked path
+  local p="$1" r old new
+  if in_list "$p" "${PATH_SKIP[@]+"${PATH_SKIP[@]}"}"; then printf '%s' "$p"; return; fi
+  for r in "${PATH_PREFIX_RULES[@]+"${PATH_PREFIX_RULES[@]}"}"; do
+    [ "$r" = "|" ] && continue
+    old="${r%%|*}"; new="${r#*|}"
+    case "$p" in "$old"*) p="$new${p#"$old"}" ;; esac
+  done
+  p="${p//SyzygyBase/SyzygyExample}"
+  printf '%s' "$p"
+}
 
-# Only allow alphanumeric app names (keeps package/identifier rules valid).
-if [[ ! "$NEW_NAME_RAW" =~ ^[A-Za-z][A-Za-z0-9]*$ ]]; then
-    echo "Error: app name must start with a letter and contain only letters and digits." >&2
-    exit 1
-fi
+# Tracked files (paths as git currently knows them).
+FILES=()
+while IFS= read -r -d '' f; do
+  case "$f" in
+    .git/*|*/build/*|build/*|*/Pods/*|Pods/*|*/node_modules/*|node_modules/*|*/.gradle/*|.gradle/*|*/.dart_tool/*|.dart_tool/*) continue ;;
+  esac
+  [ -e "$f" ] || continue   # ignore index entries already renamed on disk
+  FILES+=("$f")
+done < <(git ls-files -z --cached --others --exclude-standard)
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
-
-OLD_PASCAL="Boilerplate"
-OLD_LOWER="boilerplate"
-
-NEW_PASCAL="${NEW_NAME_RAW}"
-NEW_LOWER="$(echo "$NEW_NAME_RAW" | tr '[:upper:]' '[:lower:]')"
-
-OLD_PACKAGE="com.aks.${OLD_LOWER}"
-NEW_PACKAGE="com.aks.${NEW_LOWER}"
-
-echo "Renaming project: ${OLD_PASCAL} -> ${NEW_PASCAL}"
-echo "Package: ${OLD_PACKAGE} -> ${NEW_PACKAGE}"
-
-# 1. Move package folder structure under app/src/*/java
-for SRC_ROOT in app/src/main/java app/src/test/java app/src/androidTest/java; do
-    OLD_DIR="${SRC_ROOT}/com/aks/${OLD_LOWER}"
-    NEW_DIR="${SRC_ROOT}/com/aks/${NEW_LOWER}"
-    if [[ -d "$OLD_DIR" ]]; then
-        mkdir -p "$(dirname "$NEW_DIR")"
-        git mv "$OLD_DIR" "$NEW_DIR" 2>/dev/null || mv "$OLD_DIR" "$NEW_DIR"
-    fi
+# ---- plan: path renames -------------------------------------------------------
+MOVE_OLD=(); MOVE_NEW=()
+for f in "${FILES[@]+"${FILES[@]}"}"; do
+  nf="$(new_path_of "$f")"
+  if [ "$nf" != "$f" ]; then
+    MOVE_OLD+=("$f"); MOVE_NEW+=("$nf")
+  fi
 done
 
-# 2. Rename file contents: package declarations, imports, class name references, strings.
-#    Order matters: replace the longer/more specific token first.
-TEXT_FILES=$(grep -rlI \
-    -e "$OLD_PACKAGE" \
-    -e "$OLD_PASCAL" \
-    -e "$OLD_LOWER" \
-    . \
-    --exclude-dir=.git \
-    --exclude-dir=.gradle \
-    --exclude-dir=.idea \
-    --exclude-dir=build \
-    --exclude=setup.sh \
-    --exclude=README.md \
-    --exclude=.gitignore \
-    2>/dev/null || true)
-
-if [[ -n "$TEXT_FILES" ]]; then
-    while IFS= read -r FILE; do
-        [[ -f "$FILE" ]] || continue
-        sed -i.bak \
-            -e "s/${OLD_PACKAGE}/${NEW_PACKAGE}/g" \
-            -e "s/${OLD_PASCAL}/${NEW_PASCAL}/g" \
-            -e "s/${OLD_LOWER}/${NEW_LOWER}/g" \
-            "$FILE"
-        rm -f "${FILE}.bak"
-    done <<< "$TEXT_FILES"
+# ---- collision check: stop before any change ----------------------------------
+ERRORS=0
+i=0
+for nf in "${MOVE_NEW[@]+"${MOVE_NEW[@]}"}"; do
+  if [ -e "$nf" ]; then
+    echo "ERROR: target already exists, refusing to rename: $nf (from ${MOVE_OLD[$i]})" >&2
+    ERRORS=$((ERRORS+1))
+  fi
+  j=0
+  for other in "${MOVE_NEW[@]+"${MOVE_NEW[@]}"}"; do
+    if [ "$j" -ne "$i" ] && [ "$other" = "$nf" ]; then
+      echo "ERROR: two files would both become: $nf" >&2
+      ERRORS=$((ERRORS+1))
+    fi
+    j=$((j+1))
+  done
+  i=$((i+1))
+done
+if [ "$ERRORS" -gt 0 ]; then
+  echo "Aborted with $ERRORS collision(s). Nothing was changed." >&2
+  exit 1
 fi
 
-# 3. Rename any remaining files whose *name* contains "Boilerplate" (e.g. BoilerplateApplication.kt).
-find . \
-    \( -path ./.git -o -path ./.gradle -o -path ./.idea -o -name build \) -prune -o \
-    -type f -name "*${OLD_PASCAL}*" -print | while IFS= read -r FILE; do
-    DIR="$(dirname "$FILE")"
-    BASE="$(basename "$FILE")"
-    NEW_BASE="${BASE//${OLD_PASCAL}/${NEW_PASCAL}}"
-    if [[ "$BASE" != "$NEW_BASE" ]]; then
-        git mv "$FILE" "${DIR}/${NEW_BASE}" 2>/dev/null || mv "$FILE" "${DIR}/${NEW_BASE}"
+MODE="DRY RUN"; [ "$APPLY" -eq 1 ] && MODE="APPLY"
+echo "setup.sh ($MODE): rename to 'Syzygy Example' (identifier com.syzygyhub.example)"
+echo
+
+for w in "${WARNINGS[@]+"${WARNINGS[@]}"}"; do
+  [ "$w" = "|" ] && continue
+  echo "WARNING: $w"
+done
+[ ${#WARNINGS[@]} -gt 1 ] && echo
+
+# ---- plan + apply: content ----------------------------------------------------
+RULES=("${DISPLAY_RULES[@]+"${DISPLAY_RULES[@]}"}" "${COMMON_RULES[@]+"${COMMON_RULES[@]}"}")
+CONTENT_LINES=0
+CONTENT_FILES=0
+for f in "${FILES[@]+"${FILES[@]}"}"; do
+  in_list "$f" "${CONTENT_SKIP[@]+"${CONTENT_SKIP[@]}"}" && continue
+  [ -f "$f" ] || continue
+  is_text "$f" || continue
+  file_hit=0
+  for r in "${RULES[@]+"${RULES[@]}"}"; do
+    [ "$r" = "|" ] && continue
+    old="${r%%|*}"; new="${r#*|}"
+    while IFS= read -r line; do
+      n="${line%%:*}"; text="${line#*:}"
+      newtext="${text//"$old"/$new}"
+      [ "$file_hit" -eq 0 ] && { echo "CONTENT $f"; file_hit=1; CONTENT_FILES=$((CONTENT_FILES+1)); }
+      echo "    line $n"
+      echo "      - $text"
+      echo "      + $newtext"
+      CONTENT_LINES=$((CONTENT_LINES+1))
+    done < <(grep -nF -- "$old" "$f" 2>/dev/null)
+    if [ "$APPLY" -eq 1 ] && grep -qF -- "$old" "$f" 2>/dev/null; then
+      OLD_S="$old" NEW_S="$new" perl -0pi -e 's/\Q$ENV{OLD_S}\E/$ENV{NEW_S}/g' "$f"
     fi
+  done
 done
 
-chmod +x "$SCRIPT_DIR/setup.sh"
+# ---- plan + apply: paths (deepest first, never overwrite) ---------------------
+PATH_COUNT=${#MOVE_OLD[@]}
+if [ "$PATH_COUNT" -gt 0 ]; then
+  echo
+fi
+i=0
+for old in "${MOVE_OLD[@]+"${MOVE_OLD[@]}"}"; do
+  nf="${MOVE_NEW[$i]}"
+  echo "RENAME  $old"
+  echo "     -> $nf"
+  if [ "$APPLY" -eq 1 ]; then
+    mkdir -p "$(dirname "$nf")"
+    mv -- "$old" "$nf"
+    d="$(dirname "$old")"
+    while [ "$d" != "." ] && [ -d "$d" ] && [ -z "$(ls -A "$d")" ]; do
+      rmdir "$d"; d="$(dirname "$d")"
+    done
+  fi
+  i=$((i+1))
+done
 
-echo "Done. Project renamed to ${NEW_PASCAL} (package ${NEW_PACKAGE})."
+# ---- leftover check -----------------------------------------------------------
+echo
+echo "Leftover check (tracked files, excluding CHANGELOG.md and setup.sh):"
+LEFT=0
+for f in "${FILES[@]+"${FILES[@]}"}"; do
+  in_list "$f" "CHANGELOG.md" "setup.sh" && continue
+  np="$(new_path_of "$f")"
+  src="$f"
+  if [ "$APPLY" -eq 1 ] && [ "$np" != "$f" ]; then src="$np"; fi
+  if [ "$APPLY" -eq 0 ] && [ "$np" != "$f" ]; then src="$f"; fi
+  if printf '%s' "$np" | grep -qE "$LEFTOVER_PATTERN"; then
+    echo "  PATH    $np"; LEFT=$((LEFT+1))
+  fi
+  [ -f "$src" ] || continue
+  is_text "$src" || continue
+  while IFS= read -r line; do
+    echo "  $src:${line}"; LEFT=$((LEFT+1))
+  done < <(grep -nE -- "$LEFTOVER_PATTERN" "$src" 2>/dev/null)
+done
+
+# ---- summary ------------------------------------------------------------------
+echo
+echo "Summary: $CONTENT_LINES line change(s) in $CONTENT_FILES file(s); $PATH_COUNT path rename(s); $LEFT leftover match(es)."
+if [ "$APPLY" -eq 0 ]; then
+  echo "Dry run only. Nothing was changed. Run ./setup.sh --apply to apply."
+fi
+if [ "$LEFT" -gt 0 ]; then
+  echo "Leftover names remain (see above). Exit 1."
+  exit 1
+fi
+echo "No leftover names."
