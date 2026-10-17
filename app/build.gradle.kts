@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.syzygyhub.base"
+    namespace = "com.syzygyhub.example"
     compileSdk {
         version =
             release(37) {
@@ -14,11 +14,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.syzygyhub.base"
+        applicationId = "com.syzygyhub.example"
         minSdk = 29
         targetSdk = 36
-        versionCode = 300000
-        versionName = "3.0.0"
+        versionCode = 1
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

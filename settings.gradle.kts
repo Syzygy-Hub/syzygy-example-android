@@ -23,5 +23,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SyzygyBase"
+rootProject.name = "SyzygyExample"
 include(":app")
