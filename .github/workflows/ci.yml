@@ -18,6 +18,6 @@ jobs:
       java_version: '21'
       module: ':app'
       instrumented_tests: false
-      coverage: true
+      coverage: false
       upload_artifacts: true
       org_config_sha: 'main'
